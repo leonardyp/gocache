@@ -1,0 +1,2 @@
+# gocache
+keep in memory
