@@ -1,6 +1,8 @@
 # gocache
  The cache in memory and operation
+
  Concurrent gc
+
  Thread safety
 
 
