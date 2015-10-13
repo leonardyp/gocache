@@ -1,7 +1,6 @@
 package gocache
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -23,18 +22,24 @@ func (item *Item) Expired() bool {
 	return item.Expire.Before(time.Now())
 }
 
-type Cache struct {
+type cache struct {
 	sync.RWMutex
-	Items map[string]*Item
+	gcInterval time.Duration
+	Items      map[string]*Item
 }
 
-func NewCache() *Cache {
-	c := &Cache{
+func NewCache() *cache {
+	return &cache{
 		Items: make(map[string]*Item),
 	}
-	return c
 }
-func (this *Cache) Set(key string, val interface{}, ttl time.Duration) {
+func NewCacheWithGcInterval(gcInterval time.Duration) *cache {
+	return &cache{
+		Items:      make(map[string]*Item),
+		gcInterval: gcInterval,
+	}
+}
+func (this *cache) Set(key string, val interface{}, ttl time.Duration) {
 	this.Lock()
 	t = time.Now().Add(ttl)
 	this.Items[key] = &Item{
@@ -43,7 +48,7 @@ func (this *Cache) Set(key string, val interface{}, ttl time.Duration) {
 	}
 	this.Unlock()
 }
-func (this *Cache) Get(key string) interface{} {
+func (this *cache) Get(key string) interface{} {
 	this.RLock()
 	obj, _ := this.Items[key]
 	this.RUnlock()
@@ -52,45 +57,58 @@ func (this *Cache) Get(key string) interface{} {
 	}
 	return obj.Object
 }
-func (this *Cache) Del(key string) {
+func (this *cache) Del(key string) {
 	delete(this.Items, key)
 }
-func (this *Cache) ItemsCount() int {
+func (this *cache) ItemsCount() int {
 	this.RLock()
 	l := len(this.Items)
 	this.RUnlock()
 	return l
 }
 
-var defaultGCInterval = 1 * time.Second
+var defaultGCInterval = 3 * time.Second
 
-func SetGcInterval(inter time.Duration) {
-	fmt.Println(inter)
-	defaultGCInterval = inter
+func (this *cache) SetGcInterval(inter time.Duration) {
+	if inter > 0 {
+		this.gcInterval = inter
+		this.startGc()
+		return
+	}
+	if this.gcInterval > 0 {
+		this.startGc()
+		return
+	}
+
+	go this.Clear()
+	this.SetGcInterval(defaultGCInterval)
+
+	return
+
 }
-func (this *Cache) startGC(stop chan bool) {
+func (this *cache) gc(stop chan bool) {
 	for {
 		select {
 		case <-stop:
 			return
-		case <-time.Tick(defaultGCInterval):
-			clear(this)
+		case <-time.Tick(this.gcInterval):
+			this.Clear()
 		}
 	}
 }
 
-func (this *Cache) StartGc() {
-	go this.startGC(stopGC)
+func (this *cache) startGc() {
+	go this.gc(stopGC)
 }
-func (this *Cache) StopGc() {
+func (this *cache) StopGc() {
 	stopGC <- true
-	this.startGC(stopGC)
+	this.gc(stopGC)
 }
 
-func clear(c *Cache) {
-	for key, item := range c.Items {
+func (this *cache) Clear() {
+	for key, item := range this.Items {
 		if (*item).Expired() {
-			delete(c.Items, key)
+			delete(this.Items, key)
 		}
 	}
 }
