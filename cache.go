@@ -57,6 +57,33 @@ func (this *cache) Get(key string) interface{} {
 	}
 	return obj.Object
 }
+func (this *cache) GetString(key string) string {
+	this.RLock()
+	obj, _ := this.Items[key]
+	this.RUnlock()
+	if obj == nil {
+		return ""
+	}
+	return obj.Object.(string)
+}
+func (this *cache) GetInt(key string) int {
+	this.RLock()
+	obj, _ := this.Items[key]
+	this.RUnlock()
+	if obj == nil {
+		return 0
+	}
+	return obj.Object.(int)
+}
+func (this *cache) GetInt64(key string) int64 {
+	this.RLock()
+	obj, _ := this.Items[key]
+	this.RUnlock()
+	if obj == nil {
+		return 0
+	}
+	return obj.Object.(int64)
+}
 func (this *cache) Del(key string) {
 	delete(this.Items, key)
 }
