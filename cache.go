@@ -72,11 +72,11 @@ var defaultGCInterval = 3 * time.Second
 func (this *cache) SetGcInterval(inter time.Duration) {
 	if inter > 0 {
 		this.gcInterval = inter
-		this.startGc()
+		go this.startGc()
 		return
 	}
 	if this.gcInterval > 0 {
-		this.startGc()
+		go this.startGc()
 		return
 	}
 
@@ -86,23 +86,18 @@ func (this *cache) SetGcInterval(inter time.Duration) {
 	return
 
 }
-func (this *cache) gc(stop chan bool) {
+func (this *cache) startGc() {
 	for {
 		select {
-		case <-stop:
+		case <-stopGC:
 			return
 		case <-time.Tick(this.gcInterval):
 			this.Clear()
 		}
 	}
 }
-
-func (this *cache) startGc() {
-	go this.gc(stopGC)
-}
 func (this *cache) StopGc() {
-	stopGC <- true
-	this.gc(stopGC)
+	close(stopGC)
 }
 
 func (this *cache) Clear() {
