@@ -1,8 +1,14 @@
 package gocache
 
 import (
+	"errors"
+	"reflect"
 	"sync"
 	"time"
+)
+
+var (
+	error_empty = errors.New("error empty")
 )
 
 type Item struct {
@@ -57,35 +63,45 @@ func (this *cache) Get(key string) interface{} {
 	}
 	return obj.Object
 }
-func (this *cache) GetString(key string) string {
-	this.RLock()
-	obj, _ := this.Items[key]
-	this.RUnlock()
-	if obj == nil {
-		return ""
+func (this *cache) GetString(key string) (string, error) {
+	val := this.Get(key)
+	if val == nil {
+		return "", error_empty
 	}
-	return obj.Object.(string)
+	switch reflect.TypeOf(val).Kind() {
+	case reflect.String:
+		return val.(string), nil
+	}
+	return "", errors.New("not string")
 }
-func (this *cache) GetInt(key string) int {
-	this.RLock()
-	obj, _ := this.Items[key]
-	this.RUnlock()
-	if obj == nil {
-		return 0
+func (this *cache) GetInt(key string) (int, error) {
+	val := this.Get(key)
+	if val == nil {
+		return 0, error_empty
 	}
-	return obj.Object.(int)
+	switch reflect.TypeOf(val).Kind() {
+	case reflect.Int:
+		return val.(int), nil
+
+	}
+	return 0, errors.New("not int")
 }
-func (this *cache) GetInt64(key string) int64 {
-	this.RLock()
-	obj, _ := this.Items[key]
-	this.RUnlock()
-	if obj == nil {
-		return 0
+func (this *cache) GetInt64(key string) (int64, error) {
+	val := this.Get(key)
+	if val == nil {
+		return 0, error_empty
 	}
-	return obj.Object.(int64)
+	switch reflect.TypeOf(val).Kind() {
+	case reflect.Int64:
+		return val.(int64), nil
+
+	}
+	return 0, errors.New("not int64")
 }
 func (this *cache) Del(key string) {
+	this.Lock()
 	delete(this.Items, key)
+	this.Unlock()
 }
 func (this *cache) ItemsCount() int {
 	this.RLock()
