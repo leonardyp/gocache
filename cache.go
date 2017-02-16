@@ -31,6 +31,7 @@ func (item *Item) Expired() bool {
 type cache struct {
 	sync.RWMutex
 	gcInterval time.Duration
+	setted     bool
 	Items      map[string]*Item
 }
 
@@ -113,10 +114,12 @@ func (this *cache) ItemsCount() int {
 var defaultGCInterval = 3 * time.Second
 
 func (this *cache) SetGcInterval(inter time.Duration) {
+	defer func() { this.setted = true }()
+	if this.setted {
+		return
+	}
 	if inter > 0 {
 		this.gcInterval = inter
-		go this.startGc()
-		return
 	}
 	if this.gcInterval > 0 {
 		go this.startGc()
