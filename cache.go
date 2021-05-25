@@ -144,6 +144,7 @@ func (this *cache) startGc() {
 }
 func (this *cache) StopGc() {
 	close(stopGC)
+	fmt.Println("test webhook")
 }
 
 func (this *cache) Clear() {
